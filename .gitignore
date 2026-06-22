@@ -1,0 +1,8 @@
+.DS_Store
+.Rhistory
+.RData
+data/
+figures/
+*.h5
+*.tsv.gz
+*.rds
