@@ -207,3 +207,7 @@ This pipeline is part of a broader single-cell genomics portfolio developed duri
 ---
 
 *For questions or collaboration inquiries: nayanchoton1789@gmail.com*
+
+## Running on HPC (SLURM) and AWS
+
+Includes `run_analysis.sh` (Docker or Apptainer), a SLURM job script, and a one-shot EC2 launcher. See [HPC_AWS.md](HPC_AWS.md) for steps and what was verified.

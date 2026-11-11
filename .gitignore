@@ -6,3 +6,5 @@ figures/
 *.h5
 *.tsv.gz
 *.rds
+*.sif
+logs/
