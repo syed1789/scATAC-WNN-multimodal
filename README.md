@@ -1,5 +1,7 @@
 # Multimodal Single-Cell Epigenomics: scATAC-seq + scRNA-seq WNN Integration
 
+[![CI](https://github.com/syed1789/scATAC-WNN-multimodal/actions/workflows/ci.yml/badge.svg)](https://github.com/syed1789/scATAC-WNN-multimodal/actions/workflows/ci.yml)
+
 **Author:** Syed Nurul Hasan, Ph.D.  
 **Affiliation:** NYU Grossman School of Medicine (Ramasamy Lab)  
 **Contact:** nayanchoton1789@gmail.com | [ORCID: 0000-0002-4564-872X](https://orcid.org/0000-0002-4564-872X)
