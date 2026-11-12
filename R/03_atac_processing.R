@@ -44,7 +44,7 @@ message("Calling peaks with MACS2...")
 peaks <- CallPeaks(
   object     = pbmc,
   group.by   = "rna_clusters",
-  macs2.path = "/path/to/macs2"   # Update with your MACS2 path
+  macs2.path = Sys.which("macs3")   # MACS3 (CLI-compatible with MACS2); or set to your macs2 path
 )
 
 # Remove peaks on non-standard chromosomes and blacklist regions
@@ -132,6 +132,7 @@ pbmc <- NormalizeData(
 )
 
 # Visualize gene activity at monocyte markers
+DefaultAssay(pbmc) <- "Activity"
 p_gene_activity <- FeaturePlot(
   object    = pbmc,
   features  = c("CD14", "FCGR3A", "CX3CR1", "S100A8"),
@@ -144,6 +145,7 @@ p_gene_activity <- FeaturePlot(
 
 ggsave("figures/03c_gene_activity_monocyte.pdf",
        p_gene_activity, width = 10, height = 8)
+DefaultAssay(pbmc) <- "ATAC"
 
 # ── 4. chromVAR: TF Motif Deviation Scores ────────────────────────
 # THE CORE ANALYTICAL LAYER for disease immunology applications
@@ -175,10 +177,29 @@ pbmc <- AddMotifs(
 )
 
 # Run chromVAR to compute per-cell TF deviation scores
-pbmc <- RunChromVAR(
-  object  = pbmc,
-  genome  = BSgenome.Hsapiens.UCSC.hg38
+# (Signac's RunChromVAR now lives in SeuratWrappers; the same computation is
+#  done here directly with the chromVAR package so no extra install is needed.)
+suppressPackageStartupMessages({
+  library(chromVAR); library(SummarizedExperiment); library(BiocParallel)
+})
+register(SerialParam())
+atac_counts   <- GetAssayData(pbmc, assay = "ATAC", layer = "counts")
+peak_ranges   <- granges(pbmc[["ATAC"]])
+keep_peaks    <- Matrix::rowSums(atac_counts) > 0
+chrom_se <- SummarizedExperiment(
+  assays    = list(counts = atac_counts[keep_peaks, ]),
+  rowRanges = peak_ranges[keep_peaks]
 )
+chrom_se <- addGCBias(chrom_se, genome = BSgenome.Hsapiens.UCSC.hg38)
+motif_matrix <- GetMotifData(pbmc[["ATAC"]], slot = "data")[keep_peaks, ]
+motif_se <- SummarizedExperiment(
+  assays    = list(motifMatches = motif_matrix),
+  rowRanges = peak_ranges[keep_peaks]
+)
+dev <- computeDeviations(object = chrom_se, annotations = motif_se)
+chromvar_z <- assays(dev)[["z"]]
+chromvar_z[is.na(chromvar_z)] <- 0
+pbmc[["chromvar"]] <- CreateAssayObject(data = chromvar_z)
 
 # ── 5. Visualize Key TF Motif Activities ──────────────────────────
 # Focus on TFs relevant to monocyte biology and disease immunology

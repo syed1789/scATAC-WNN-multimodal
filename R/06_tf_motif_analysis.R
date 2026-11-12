@@ -79,9 +79,8 @@ top_cm_motifs <- motif_diff_ncm_vs_cm %>%
 all_top_motifs <- c(top_ncm_motifs, top_cm_motifs)
 
 # Average chromVAR deviation scores per cell type
-mono_types <- c("Classical Monocyte",
-                "Non-classical Monocyte",
-                "CD14+CD16+ Monocyte")
+mono_types <- intersect(c("Classical Monocyte", "Non-classical Monocyte",
+                          "CD14+CD16+ Monocyte"), unique(pbmc$cell_type))
 
 avg_motif_scores <- AverageExpression(
   object   = subset(pbmc, cell_type %in% mono_types),
@@ -128,10 +127,16 @@ key_tfs <- list(
 
 DefaultAssay(pbmc) <- "chromvar"
 
+# Map TF names to the JASPAR motif IDs present in the chromVAR assay
+chromvar_ids   <- rownames(pbmc[["chromvar"]])
+chromvar_names <- ConvertMotifID(pbmc, id = chromvar_ids, assay = "ATAC")
+key_tfs <- key_tfs[sub("_.*", "", names(key_tfs)) %in% chromvar_names]
+
 tf_plots <- lapply(names(key_tfs), function(tf_id) {
+  motif_id <- chromvar_ids[chromvar_names == sub("_.*", "", tf_id)][1]
   FeaturePlot(
     object    = pbmc,
-    features  = tf_id,
+    features  = motif_id,
     reduction = "wnn.umap",
     pt.size   = 0.3,
     min.cutoff = "q10",

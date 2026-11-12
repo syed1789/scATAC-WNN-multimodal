@@ -1,0 +1,8 @@
+"Metric","Value"
+"Total cells (pre-QC)",3009
+"Cells passing QC",2568
+"Cells removed",441
+"Median genes/cell",1506
+"Median ATAC peaks/cell",5734
+"Median TSS enrichment",5.49
+"Median nucleosome signal",0.64

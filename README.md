@@ -94,6 +94,31 @@ This is particularly powerful for questions like:
 
 ---
 
+## Results (10x PBMC unsorted 3k Multiome)
+
+The scripts in `R/` were run end to end on the public 10x Genomics
+[PBMC unsorted 3k Multiome](https://www.10xgenomics.com/datasets/pbmc-from-a-healthy-donor-no-cell-sorting-3-k-1-standard-2-0-0)
+dataset (3,009 cells; set `MULTIOME_PREFIX=pbmc_granulocyte_sorted_10k` to use the 10k set instead).
+Figures (PNG) and tables are in [`results/`](results/); full PDF figures are written to `figures/` when you run the scripts.
+
+| Step | Result |
+|---|---|
+| QC | 2,568 of 3,009 cells pass; median 1,506 genes, 5,734 peaks, TSS enrichment 5.5, nucleosome signal 0.64 |
+| Clustering quality (silhouette) | RNA 0.471, ATAC 0.419, **WNN joint 0.590** |
+| Annotation | CD4+ T 40%, classical monocytes 31%, NK 13%, B 10%, non-classical monocytes 3.8%, CD1C+ DC 1.4%, pDC 1.0% |
+| chromVAR + differential motifs | Non-classical vs classical monocytes: AP-1 family motifs (FOS/JUN/JUND) are the most significantly differential, lower in non-classical monocytes (`results/06_ncm_vs_cm_tf_motifs.csv`) |
+
+![RNA, ATAC and WNN UMAPs](results/04a_umap_comparison_rna_atac_wnn.png)
+
+![Annotated WNN UMAP](results/05a_wnn_annotated_celltypes.png)
+
+![TF motif activity](results/06b_key_tf_motifs_wnn_umap.png)
+
+Notes: cell types are assigned per WNN cluster from marker-gene module scores (not hard-coded
+cluster numbers). This is coarse annotation: CD8+ T cells are not separated from CD4+ T cells, and
+CD14+CD16+ monocytes are not resolved in this 3k dataset. Peaks are called with MACS3 (CLI-compatible
+with MACS2) per RNA cluster, and chromVAR is run directly with the `chromVAR` package.
+
 ## Data
 
 This pipeline uses the publicly available **10x Genomics PBMC Multiome** dataset:

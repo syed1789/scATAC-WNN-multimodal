@@ -28,14 +28,17 @@ set.seed(42)
 message("Loading 10x Multiome data...")
 
 # Load RNA counts
-counts <- Read10X_h5("data/pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5")
+# Dataset prefix; default is the 10x PBMC unsorted 3k Multiome set (laptop-sized).
+# Use MULTIOME_PREFIX=pbmc_granulocyte_sorted_10k for the 10k set.
+prefix <- Sys.getenv("MULTIOME_PREFIX", "pbmc_unsorted_3k")
+counts <- Read10X_h5(sprintf("data/%s_filtered_feature_bc_matrix.h5", prefix))
 
 # Extract RNA and ATAC matrices
 rna_counts  <- counts$`Gene Expression`
 atac_counts <- counts$Peaks
 
 # Load fragment file for ATAC
-fragpath <- "data/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz"
+fragpath <- sprintf("data/%s_atac_fragments.tsv.gz", prefix)
 
 # Get gene annotations for hg38
 annotation <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
@@ -95,7 +98,7 @@ pbmc[["blacklist_ratio"]] <- FractionCountsInRegion(
 
 # Peak region fragments per cell
 pbmc[["peak_region_fragments"]] <- colSums(
-  GetAssayData(pbmc, assay = "ATAC", slot = "counts")
+  GetAssayData(pbmc, assay = "ATAC", layer = "counts")
 )
 
 # ── 5. Visualize QC Metrics ────────────────────────────────────────
@@ -118,6 +121,10 @@ p_atac_qc <- VlnPlot(
   pt.size  = 0
 ) &
   theme(axis.title.x = element_blank())
+
+# Grouping variables used by the TSS and fragment-length plots
+pbmc$high.tss <- ifelse(pbmc$TSS.enrichment > 3, "High", "Low")
+pbmc$nucleosome_group <- ifelse(pbmc$nucleosome_signal > 2, "NS > 2", "NS < 2")
 
 # TSS enrichment plot — key ATAC QC metric
 p_tss <- TSSPlot(pbmc, group.by = "high.tss") +
@@ -150,17 +157,22 @@ atac_min_tss       <- 2       # Minimum TSS enrichment score
 atac_max_ns        <- 4       # Maximum nucleosome signal
 atac_max_blacklist <- 0.05    # Maximum blacklist fraction
 
-pbmc_filtered <- subset(
-  x      = pbmc,
-  subset = nFeature_RNA          > rna_min_features   &
-           nFeature_RNA          < rna_max_features   &
-           percent.mt            < rna_max_mt         &
-           nFeature_ATAC         > atac_min_peaks     &
-           nFeature_ATAC         < atac_max_peaks     &
-           TSS.enrichment        > atac_min_tss       &
-           nucleosome_signal     < atac_max_ns        &
-           blacklist_ratio       < atac_max_blacklist
-)
+# Peaks detected per cell, as plain metadata (the ATAC assay has no normalized
+# "data" layer yet, so Seurat cannot derive these on the fly for subset()).
+atac_mat <- GetAssayData(pbmc, assay = "ATAC", layer = "counts")
+pbmc$nFeature_ATAC <- Matrix::colSums(atac_mat > 0)
+pbmc$nCount_ATAC   <- Matrix::colSums(atac_mat)
+
+md <- pbmc@meta.data
+keep <- md$nFeature_RNA      > rna_min_features   &
+        md$nFeature_RNA      < rna_max_features   &
+        md$percent.mt        < rna_max_mt         &
+        md$nFeature_ATAC     > atac_min_peaks     &
+        md$nFeature_ATAC     < atac_max_peaks     &
+        md$TSS.enrichment    > atac_min_tss       &
+        md$nucleosome_signal < atac_max_ns        &
+        md$blacklist_ratio   < atac_max_blacklist
+pbmc_filtered <- pbmc[, rownames(md)[keep & !is.na(keep)]]
 
 message(paste("Cells after QC filtering:", ncol(pbmc_filtered)))
 message(paste("Cells removed:", ncol(pbmc) - ncol(pbmc_filtered)))
