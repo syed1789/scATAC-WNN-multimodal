@@ -52,9 +52,11 @@ IMG=scatac-wnn:latest
 build_image "$IMG" .
 case "$step" in
   prefetch)
-    echo "Download the 10x PBMC granulocyte-sorted 10k Multiome files into data/ (see README):" >&2
-    echo "  pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5" >&2
-    echo "  pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz (+ .tbi)" ;;
+    mkdir -p data
+    U=https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_unsorted_3k/pbmc_unsorted_3k
+    for f in filtered_feature_bc_matrix.h5 atac_fragments.tsv.gz atac_fragments.tsv.gz.tbi; do
+      [ "$DRY_RUN" = 1 ] && echo "+ curl -fsSL $U""_$f" || curl -fsSL "$U""_$f" -o "data/pbmc_unsorted_3k_$f"
+    done ;;
   run)
     mkdir -p figures data
     for s in R/01_quality_control.R R/02_rna_processing.R R/03_atac_processing.R \

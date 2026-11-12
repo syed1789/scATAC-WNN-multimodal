@@ -32,6 +32,7 @@ set.seed(42)
 # ── Load ATAC-processed object ─────────────────────────────────────
 message("Loading ATAC-processed object...")
 pbmc <- readRDS("data/pbmc_multiome_atac_processed.rds")
+DefaultAssay(pbmc) <- "SCT"   # expression plots below use SCT values
 
 # ── 1. WNN Graph Construction ─────────────────────────────────────
 # FindMultiModalNeighbors computes:
@@ -45,7 +46,7 @@ pbmc <- FindMultiModalNeighbors(
   object             = pbmc,
   reduction.list     = list("pca", "lsi"),
   dims.list          = list(1:30, 2:30),  # LSI excludes dim 1 (depth)
-  modality.weight.name = "RNA.weight",
+  modality.weight.name = c("RNA.weight", "ATAC.weight"),
   verbose            = TRUE
 )
 

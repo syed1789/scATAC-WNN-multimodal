@@ -50,28 +50,22 @@ pbmc <- AddModuleScore(
   name     = "CellType_Score"
 )
 
-# Manual annotation based on marker expression + cluster inspection
-# (In practice: iterate between DotPlot examination and annotation)
-
-cluster_annotations <- c(
-  "0"  = "Classical Monocyte",
-  "1"  = "CD4+ T cell",
-  "2"  = "CD8+ T cell",
-  "3"  = "NK cell",
-  "4"  = "B cell",
-  "5"  = "Classical Monocyte",
-  "6"  = "CD4+ T cell (Memory)",
-  "7"  = "Non-classical Monocyte",
-  "8"  = "CD8+ T cell (Effector)",
-  "9"  = "HSPC",
-  "10" = "CD1C+ DC",
-  "11" = "CD4+ T cell (Naive)",
-  "12" = "CD14+CD16+ Monocyte",
-  "13" = "pDC",
-  "14" = "Naive B cell"
+# Data-driven annotation: each WNN cluster gets the lineage whose marker module
+# score (computed above) is highest on average in that cluster. Cluster numbers
+# change between runs, so labels are derived from the data, not hard-coded.
+score_cols <- paste0("CellType_Score", seq_along(cell_type_markers))
+cluster_scores <- aggregate(
+  pbmc@meta.data[, score_cols],
+  by = list(cluster = as.character(pbmc$wnn_clusters)),
+  FUN = mean
 )
+cluster_annotations <- setNames(
+  names(cell_type_markers)[apply(cluster_scores[, score_cols], 1, which.max)],
+  cluster_scores$cluster
+)
+print(cluster_annotations)
 
-pbmc$cell_type <- cluster_annotations[as.character(pbmc$wnn_clusters)]
+pbmc$cell_type <- unname(cluster_annotations[as.character(pbmc$wnn_clusters)])
 
 # ── 2. Annotated WNN UMAP ─────────────────────────────────────────
 cell_type_colors <- c(
@@ -156,9 +150,8 @@ Idents(pbmc)       <- "cell_type"
 p_fcgr3a_cov <- CoveragePlot(
   object    = pbmc,
   region    = "FCGR3A",
-  idents    = c("Classical Monocyte",
-                "Non-classical Monocyte",
-                "CD14+CD16+ Monocyte"),
+  idents    = intersect(c("Classical Monocyte", "Non-classical Monocyte",
+                "CD14+CD16+ Monocyte"), unique(pbmc$cell_type)),
   extend.upstream   = 3000,
   extend.downstream = 3000
 ) +
@@ -168,9 +161,8 @@ p_fcgr3a_cov <- CoveragePlot(
 p_cx3cr1_cov <- CoveragePlot(
   object    = pbmc,
   region    = "CX3CR1",
-  idents    = c("Classical Monocyte",
-                "Non-classical Monocyte",
-                "CD14+CD16+ Monocyte"),
+  idents    = intersect(c("Classical Monocyte", "Non-classical Monocyte",
+                "CD14+CD16+ Monocyte"), unique(pbmc$cell_type)),
   extend.upstream   = 5000,
   extend.downstream = 3000
 ) +
